@@ -78,7 +78,7 @@ def baseline_term(
     """
     logps = (left_sum_to_size(logp, baseline.shape) for logp in logps)
     terms = ((1 - magic_box(logp)) * baseline for logp in logps)
-    return sum(terms, torch.tensor(0.0))
+    return sum(terms, torch.zeros_like(baseline))
 
 
 def batch_baseline_term(
@@ -99,9 +99,7 @@ def batch_baseline_term(
     if cost.numel() <= 1:
         raise ValueError("batch_baseline_term() requires a batch of at least two costs")
     baseline = (cost.sum() - cost) / (cost.numel() - 1)
-    logps = (left_sum_to_size(logp, baseline.shape) for logp in logps)
-    terms = ((1 - magic_box(logp)) * baseline for logp in logps)
-    return sum(terms, cost.new_tensor(0.0))
+    return baseline_term(baseline, logps)
 
 
 class EMABaseline(nn.Module):

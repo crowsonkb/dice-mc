@@ -28,6 +28,7 @@ The output of `cost_node()` can be differentiated to propagate gradients to the 
 losses = losses_1 + 0.1 * losses_2
 loss = losses.mean()
 loss.backward()
+opt.step()
 ```
 
 Baselines can be used to reduce the variance of the estimator. DiCE baseline terms are scalars with the value of zero that have the gradient of baseline subtraction. `EMABaseline` is a simple exponential moving average baseline. `EMABaseline` contains state which should be saved and loaded when checkpointing.
@@ -35,7 +36,8 @@ Baselines can be used to reduce the variance of the estimator. DiCE baseline ter
 ```python
 baseline = dice.EMABaseline().to(device)
 ...
-loss = loss + baseline(loss, [logp_1, logp_2, logp_3])  # All stochastic nodes
+losses = losses + baseline(losses, [logp_1, logp_2, logp_3])  # All stochastic nodes
+loss = losses.mean()
 loss.backward()
 opt.step()
 ```
