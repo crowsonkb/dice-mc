@@ -61,9 +61,7 @@ def sample_categorical(logits: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor
     return logp, actions
 
 
-def baseline_term(
-    baseline: torch.Tensor, logps: Iterable[torch.Tensor]
-) -> torch.Tensor:
+def baseline_term(baseline: torch.Tensor, logps: Iterable[torch.Tensor]) -> torch.Tensor:
     """Compute the baseline term for a set of stochastic nodes.
 
     Args:
@@ -81,9 +79,7 @@ def baseline_term(
     return sum(terms, torch.zeros_like(baseline))
 
 
-def batch_baseline_term(
-    cost: torch.Tensor, logps: Iterable[torch.Tensor]
-) -> torch.Tensor:
+def batch_baseline_term(cost: torch.Tensor, logps: Iterable[torch.Tensor]) -> torch.Tensor:
     """REINFORCE with replacement baseline, from "Buy 4 REINFORCE Samples, Get a Baseline for
     Free!". Computes a baseline for a batch of costs using the other costs in the batch.
 
@@ -133,9 +129,7 @@ class EMABaseline(nn.Module):
         self.decay_cumprod.mul_(self.decay)
         self.mean_biased.mul_(self.decay).add_(cost.mean(), alpha=1 - self.decay)
 
-    def forward(
-        self, cost: torch.Tensor, logps: Iterable[torch.Tensor]
-    ) -> torch.Tensor:
+    def forward(self, cost: torch.Tensor, logps: Iterable[torch.Tensor]) -> torch.Tensor:
         """Compute the baseline term, update the baseline, and return the cost with modified
         gradients.
 
