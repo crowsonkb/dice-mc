@@ -12,18 +12,23 @@ def magic_box(tau: torch.Tensor) -> torch.Tensor:
     return torch.exp(tau - tau.detach())
 
 
+def left_sum_to_size(tensor: torch.Tensor, shape: tuple[int, ...]) -> torch.Tensor:
+    """Sum the tensor to the given shape using left broadcasting."""
+    return tensor.sum_to_size(shape + (1,) * (tensor.ndim - len(shape))).view(shape)
+
+
 def cost_node(cost: torch.Tensor, logps: Iterable[torch.Tensor]) -> torch.Tensor:
     """Compute the surrogate losses for a set of stochastic nodes.
 
     Args:
         cost (torch.Tensor): Cost node (a scalar cost or a batch of costs).
         logps (Iterable[torch.Tensor]): Iterable of logprobs of stochastic nodes that the cost node
-            causally depends on. Must broadcast with each other and with the cost tensor.
+            causally depends on. The cost tensor must be left broadcastable to them.
 
     Returns:
         torch.Tensor: DiCE surrogate losses, the same shape as the cost tensor.
     """
-    tau = sum(logps, cost.new_tensor(0.0))
+    tau = sum((left_sum_to_size(logp, cost.shape) for logp in logps), cost.new_tensor(0.0))
     return magic_box(tau) * cost
 
 
@@ -84,7 +89,7 @@ def batch_baseline_term(
     Args:
         cost (torch.Tensor): Batch of costs to compute the baseline for.
         logps (Iterable[torch.Tensor]): Iterable of logprobs of stochastic nodes to compute
-            the baseline term for.
+            the baseline term for. The cost tensor must be left broadcastable to them.
 
     Returns:
         torch.Tensor: DiCE baseline term, a scalar that is zero in the forward pass and has
@@ -93,6 +98,7 @@ def batch_baseline_term(
     if cost.numel() <= 1:
         raise ValueError("batch_baseline_term() requires a batch of at least two costs")
     baseline = (cost.sum() - cost) / (cost.numel() - 1)
+    logps = (left_sum_to_size(logp, baseline.shape) for logp in logps)
     terms = (torch.mean((1 - magic_box(logp)) * baseline) for logp in logps)
     return sum(terms, cost.new_tensor(0.0))
 
@@ -143,10 +149,8 @@ class EMABaseline(nn.Module):
             torch.Tensor: DiCE baseline term, a scalar that is zero in the forward pass and has
                 the gradient of baseline subtraction.
         """
-        if self.mean.isfinite().all():
+        if self.decay_cumprod < 1.0:
             baseline = baseline_term(self.mean, logps)
-        elif cost.numel() > 1:
-            baseline = batch_baseline_term(cost, logps)
         else:
             baseline = cost.new_tensor(0.0)
         self.update(cost)
