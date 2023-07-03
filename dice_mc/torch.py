@@ -73,10 +73,11 @@ def baseline_term(
             the baseline term for.
 
     Returns:
-        torch.Tensor: DiCE baseline term, a scalar that is zero in the forward pass and has
-            the gradient of baseline subtraction.
+        torch.Tensor: DiCE baseline term, a tensor the same shape as `baseline` that is zero in
+            the forward pass and has the gradient of baseline subtraction.
     """
-    terms = (torch.mean((1 - magic_box(logp)) * baseline) for logp in logps)
+    logps = (left_sum_to_size(logp, baseline.shape) for logp in logps)
+    terms = ((1 - magic_box(logp)) * baseline for logp in logps)
     return sum(terms, torch.tensor(0.0))
 
 
@@ -92,14 +93,14 @@ def batch_baseline_term(
             the baseline term for. The cost tensor must be left broadcastable to them.
 
     Returns:
-        torch.Tensor: DiCE baseline term, a scalar that is zero in the forward pass and has
-            the gradient of baseline subtraction.
+        torch.Tensor: DiCE baseline term, a tensor the same shape as `cost` that is zero in
+            the forward pass and has the gradient of baseline subtraction.
     """
     if cost.numel() <= 1:
         raise ValueError("batch_baseline_term() requires a batch of at least two costs")
     baseline = (cost.sum() - cost) / (cost.numel() - 1)
     logps = (left_sum_to_size(logp, baseline.shape) for logp in logps)
-    terms = (torch.mean((1 - magic_box(logp)) * baseline) for logp in logps)
+    terms = ((1 - magic_box(logp)) * baseline for logp in logps)
     return sum(terms, cost.new_tensor(0.0))
 
 
@@ -146,13 +147,13 @@ class EMABaseline(nn.Module):
                 the baseline term for.
 
         Returns:
-            torch.Tensor: DiCE baseline term, a scalar that is zero in the forward pass and has
-                the gradient of baseline subtraction.
+            torch.Tensor: DiCE baseline term, a tensor the same shape as `cost` that is zero in
+                the forward pass and has the gradient of baseline subtraction.
         """
         if self.decay_cumprod < 1.0:
-            baseline = baseline_term(self.mean, logps)
+            baseline = baseline_term(self.mean.expand_as(cost), logps)
         else:
-            baseline = cost.new_tensor(0.0)
+            baseline = torch.zeros_like(cost)
         self.update(cost)
         return baseline
 
