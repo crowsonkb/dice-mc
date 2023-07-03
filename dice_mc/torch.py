@@ -8,7 +8,15 @@ from torch.nn import functional as F
 
 
 def magic_box(tau: torch.Tensor) -> torch.Tensor:
-    """MagicBox operator."""
+    """MagicBox operator.
+
+    Args:
+        tau (torch.Tensor): Sum of logprobs of a set of stochastic nodes.
+
+    Returns:
+        torch.Tensor: The result of the MagicBox operator applied to `tau`, which is a tensor
+            of ones in the forward pass.
+    """
     return torch.exp(tau - tau.detach())
 
 
