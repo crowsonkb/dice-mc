@@ -63,7 +63,7 @@ def sample_categorical(logits: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor
         torch.Tensor: Logprobs of the actions selected at this stochastic node.
         torch.Tensor: Sampled actions for this stochastic node.
     """
-    g = torch.rand_like(logits).log_().neg_().log_().neg_()
+    g = torch.rand_like(logits).log_().nan_to_num_().neg_().log_().neg_()
     actions = torch.argmax(logits + g, dim=-1)
     logp = logp_categorical(logits, actions)
     return logp, actions
