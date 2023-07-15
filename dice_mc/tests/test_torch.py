@@ -51,3 +51,40 @@ class TestLeftSumToSize(unittest.TestCase):
         x = torch.randn(3, 4, 5)
         with self.assertRaisesRegex(RuntimeError, "is not expandable"):
             dice.left_sum_to_size(x, (3, 4, 5, 6))
+
+
+class TestLogPCategorical(unittest.TestCase):
+    def test_logp(self):
+        """Test that logp_categorical() computes the logprobs of the given actions"""
+        probs = torch.tensor([0.25, 0.75])
+        actions = torch.tensor(0)
+        assert_close(dice.logp_categorical(probs.log(), actions).exp(), probs[0])
+
+    def test_batch_logp(self):
+        """Test that logp_categorical() computes the logprobs of the given batch of actions"""
+        probs = torch.tensor([[0.25, 0.75], [0.25, 0.75]])
+        actions = torch.tensor([0, 1])
+        assert_close(dice.logp_categorical(probs.log(), actions).exp(), probs[range(2), actions])
+
+
+class TestSampleCategorical(unittest.TestCase):
+    def test_sample(self):
+        """Test that sample_categorical() samples from the given distribution"""
+        probs = torch.tensor([0.25, 0.75]).expand(10000, -1)
+        logp, actions = dice.sample_categorical(probs.log())
+        sampled_probs = (actions == torch.arange(2)[:, None]).mean(dim=-1, dtype=torch.float32)
+        assert_close(sampled_probs, probs[0], atol=0.01, rtol=0.01)
+
+    def test_logp(self):
+        """Test that sample_categorical() returns the logprobs of the given actions"""
+        probs = torch.tensor([0.25, 0.75])
+        logp, actions = dice.sample_categorical(probs.log())
+        expected = probs.gather(-1, actions[..., None])[..., 0]
+        assert_close(logp.exp(), expected)
+
+    def test_batch_logp(self):
+        """Test that sample_categorical() reports the logprobs of the given batch of actions"""
+        probs = torch.tensor([[0.25, 0.75], [0.25, 0.75]])
+        logp, actions = dice.sample_categorical(probs.log())
+        expected = probs.gather(-1, actions[..., None])[..., 0]
+        assert_close(logp.exp(), expected)
