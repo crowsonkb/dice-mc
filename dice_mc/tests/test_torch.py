@@ -83,8 +83,8 @@ class TestSampleCategorical(unittest.TestCase):
         assert_close(logp.exp(), expected)
 
     def test_batch_logp(self):
-        """Test that sample_categorical() reports the logprobs of the given batch of actions"""
-        probs = torch.tensor([[0.25, 0.75], [0.25, 0.75]])
+        """Test that sample_categorical() returns the logprobs of the given batch of actions"""
+        probs = torch.tensor([[0.25, 0.75], [0.75, 0.25]])
         logp, actions = dice.sample_categorical(probs.log())
         expected = probs.gather(-1, actions[..., None])[..., 0]
         assert_close(logp.exp(), expected)
