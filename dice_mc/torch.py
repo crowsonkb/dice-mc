@@ -1,6 +1,6 @@
 """DiCE: The Infinitely Differentiable Monte-Carlo Estimator"""
 
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import torch
 from torch import nn
@@ -20,7 +20,7 @@ def magic_box(tau: torch.Tensor) -> torch.Tensor:
     return torch.exp(tau - tau.detach())
 
 
-def left_sum_to_size(tensor: torch.Tensor, shape: tuple[int, ...]) -> torch.Tensor:
+def left_sum_to_size(tensor: torch.Tensor, shape: Tuple[int, ...]) -> torch.Tensor:
     """Sum the tensor to the given shape using left broadcasting."""
     return tensor.sum_to_size(shape + (1,) * (tensor.ndim - len(shape))).view(shape)
 
@@ -53,7 +53,7 @@ def logp_categorical(logits: torch.Tensor, actions: torch.Tensor) -> torch.Tenso
     return F.log_softmax(logits, dim=-1).gather(-1, actions[..., None])[..., 0]
 
 
-def sample_categorical(logits: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+def sample_categorical(logits: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """Sample from an optionally batched categorical distribution given logits.
 
     Args:
