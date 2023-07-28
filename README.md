@@ -65,15 +65,11 @@ outputs = model(tokens, attention_mask=attention_mask)
 logp = dice.logp_categorical(outputs.logits[:, prompt_len - 1 : -1], tokens[:, prompt_len:])
 ```
 
-The prompt should be excluded except for the logits for the last prompt token. The tokens should be shifted one position left so that each token lines up with the vector of logits it was sampled from. The log probability under the model of each *prefix* of the tokens (subsequence that contains the first token) is given by summing the log probabilities of the tokens in the prefix, so take `logp.cumsum(dim=1)` to get the log probability of each prefix. The "stochastic node" created by `logp_categorical()`, for an autoregressive sequence model, is secretly a sequence of stochastic nodes where each node is only causally influenced by nodes to its left. Again, you can use this fact to reduce the variance of the estimator: suppose one of your loss terms is the KL divergence from the logits of some other model. The KL penalty for a given token is not affected by tokens to its right, so they can be excluded:
+The prompt should be excluded except for the logits for the last prompt token. The tokens should be shifted one position left so that each token lines up with the vector of logits it was sampled from. The log probability under the model of each *prefix* of the tokens (subsequence that contains the first token) is given by summing the log probabilities of the tokens in the prefix, so take `logp.cumsum(dim=1)` to get the log probability of each prefix. The "stochastic node" created by `logp_categorical()`, for an autoregressive sequence model, is secretly a sequence of stochastic nodes where each node is only causally influenced by nodes to its left. Again, you can use this fact to reduce the variance of the estimator: suppose one of your loss terms is the KL divergence from the logits of a reference model. The KL penalty for a given token is not affected by tokens to its right, so they can be excluded:
 
 ```python
-losses_kl = F.kl_div(
-    F.log_softmax(outputs_old_model.logits[:, prompt_len:], dim=-1),
-    F.log_softmax(outputs.logits[:, prompt_len:], dim=-1),
-    reduction="none",
-    log_target=True,
-).sum(dim=-1)
+logq = dice.logp_categorical(outputs_ref.logits[:, prompt_len - 1 : -1], tokens[:, prompt_len:])
+losses_kl = logp.detach() - logq.detach()
 logp_cumsum = torch.cumsum(logp, dim=1)
 losses_kl = dice.cost_node(losses_kl, [logp_cumsum])
 ```
