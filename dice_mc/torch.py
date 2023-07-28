@@ -100,9 +100,9 @@ def batch_baseline_term(cost: torch.Tensor, logps: Iterable[torch.Tensor]) -> to
         torch.Tensor: DiCE baseline term, a tensor the same shape as `cost` that is zero in
             the forward pass and has the gradient of baseline subtraction.
     """
-    if cost.numel() <= 1:
+    if cost.shape[0] <= 1:
         raise ValueError("batch_baseline_term() requires a batch of at least two costs")
-    baseline = (cost.sum() - cost) / (cost.numel() - 1)
+    baseline = (cost.sum(dim=0) - cost) / (cost.shape[0] - 1)
     return baseline_term(baseline, logps)
 
 
